@@ -131,7 +131,7 @@ export default function ChatBot() {
                 <Brain className="w-5 h-5 text-white" />
               </div>
               <div>
-                <div className="text-sm font-semibold text-white font-display"><NeuroNova></NeuroNova> Assistant</div>
+                <div className="text-sm font-semibold text-white font-display">NeuroNova Assistant</div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-[11px] text-emerald-400">Powered by Mistral AI</span>

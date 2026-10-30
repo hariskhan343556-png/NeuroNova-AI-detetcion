@@ -1,165 +1,182 @@
+
 import { useRef, useMemo, useEffect, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Stars, useGLTF, Center } from '@react-three/drei'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { OrbitControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 
-/* ------------------------------------------------------------------ */
-/*  GLB Brain model                                                    */
-/* ------------------------------------------------------------------ */
-function BrainModel() {
+/* Brain-inspired 3D placeholder */
+function BrainPlaceholder() {
   const groupRef = useRef()
-  const { scene } = useGLTF('/brain.glb')
-  const { camera } = useThree()
 
-  // Clone so we don't mutate the cached original
-  const clonedScene = useMemo(() => {
-    const clone = scene.clone(true)
-    // Ensure all meshes receive lights & cast shadows
-    clone.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true
-        child.receiveShadow = true
-        // If the model has no material or the material is too dark,
-        // enhance it slightly while keeping the original textures
-        if (child.material) {
-          child.material = child.material.clone()
-          child.material.roughness = Math.min(child.material.roughness ?? 0.5, 0.65)
-          child.material.metalness = Math.max(child.material.metalness ?? 0, 0.05)
-          child.material.envMapIntensity = 0.8
-          child.material.needsUpdate = true
-        }
-      }
-    })
-    return clone
-  }, [scene])
-
-  // Auto-scale & center the model to fit nicely in the viewport
-  useEffect(() => {
-    if (!groupRef.current) return
-    const box = new THREE.Box3().setFromObject(groupRef.current)
-    const size = new THREE.Vector3()
-    const center = new THREE.Vector3()
-    box.getSize(size)
-    box.getCenter(center)
-
-    const maxDim = Math.max(size.x, size.y, size.z)
-    const desiredSize = 2.8 // how big the brain should appear
-    const scale = desiredSize / maxDim
-    groupRef.current.scale.setScalar(scale)
-
-    // Re-center after scaling
-    box.setFromObject(groupRef.current)
-    box.getCenter(center)
-    groupRef.current.position.sub(center)
-  }, [clonedScene])
-
-  // Gentle idle rotation
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (groupRef.current) {
-      groupRef.current.rotation.y += 0.002
+      groupRef.current.rotation.y += delta * 0.15
     }
   })
 
   return (
     <group ref={groupRef}>
-      <primitive object={clonedScene} />
+      {/* Outer neural network shell */}
+      <mesh scale={[1.05, 0.9, 0.85]}>
+        <icosahedronGeometry args={[1, 3]} />
+        <meshStandardMaterial
+          color="#8b5cf6"
+          emissive="#6d28d9"
+          emissiveIntensity={0.7}
+          wireframe
+          metalness={0.4}
+          roughness={0.3}
+        />
+      </mesh>
+
+      {/* Inner glowing core */}
+      <mesh scale={[0.82, 0.7, 0.68]}>
+        <icosahedronGeometry args={[1, 2]} />
+        <meshStandardMaterial
+          color="#22d3ee"
+          emissive="#0891b2"
+          emissiveIntensity={0.5}
+          transparent
+          opacity={0.22}
+          metalness={0.3}
+          roughness={0.4}
+        />
+      </mesh>
+
+      {/* Neural nodes */}
+      {Array.from({ length: 18 }, (_, i) => {
+        const phi = Math.acos(1 - 2 * (i + 0.5) / 18)
+        const theta = Math.PI * (1 + Math.sqrt(5)) * i
+        const x = 1.08 * Math.sin(phi) * Math.cos(theta)
+        const y = 0.92 * Math.cos(phi)
+        const z = 0.85 * Math.sin(phi) * Math.sin(theta)
+
+        return (
+          <mesh key={i} position={[x, y, z]}>
+            <sphereGeometry args={[0.035, 10, 10]} />
+            <meshBasicMaterial color="#67e8f9" />
+          </mesh>
+        )
+      })}
     </group>
   )
 }
 
-// Preload the model so it starts downloading immediately
-useGLTF.preload('/brain.glb')
-
-/* ------------------------------------------------------------------ */
-/*  Subtle floating particles around the brain                         */
-/* ------------------------------------------------------------------ */
+/* Floating neural particles */
 function NeuralParticles() {
   const pointsRef = useRef()
-  const count = 500
 
   const positions = useMemo(() => {
-    const pos = new Float32Array(count * 3)
+    const count = 350
+    const data = new Float32Array(count * 3)
+
     for (let i = 0; i < count; i++) {
-      const r = 2.0 + Math.random() * 1.8
+      const radius = 2 + Math.random() * 1.8
       const theta = Math.random() * Math.PI * 2
       const phi = Math.acos(2 * Math.random() - 1)
-      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta)
-      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
-      pos[i * 3 + 2] = r * Math.cos(phi)
+
+      data[i * 3] = radius * Math.sin(phi) * Math.cos(theta)
+      data[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta)
+      data[i * 3 + 2] = radius * Math.cos(phi)
     }
-    return pos
+
+    return data
   }, [])
 
-  useFrame((state) => {
+  useFrame((_, delta) => {
     if (pointsRef.current) {
-      pointsRef.current.rotation.y = state.clock.elapsedTime * 0.03
+      pointsRef.current.rotation.y += delta * 0.025
     }
   })
 
   return (
     <points ref={pointsRef}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
+        <bufferAttribute
+          attach="attributes-position"
+          count={positions.length / 3}
+          array={positions}
+          itemSize={3}
+        />
       </bufferGeometry>
-      <pointsMaterial size={0.018} color="#22d3ee" transparent opacity={0.45} sizeAttenuation />
+      <pointsMaterial
+        size={0.02}
+        color="#22d3ee"
+        transparent
+        opacity={0.65}
+        sizeAttenuation
+      />
     </points>
   )
 }
 
-/* ------------------------------------------------------------------ */
-/*  Scene                                                              */
-/* ------------------------------------------------------------------ */
+/* Main scene */
 export default function BrainScene() {
-  const containerRef = useRef()
+  const containerRef = useRef(null)
   const [isVisible, setIsVisible] = useState(true)
 
-  // Pause Three.js rendering when the canvas scrolls out of view
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
+    const element = containerRef.current
+    if (!element) return
+
     const observer = new IntersectionObserver(
       ([entry]) => setIsVisible(entry.isIntersecting),
       { threshold: 0 }
     )
-    observer.observe(el)
+
+    observer.observe(element)
     return () => observer.disconnect()
   }, [])
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+    <div
+      ref={containerRef}
+      style={{ width: '100%', height: '100%', position: 'relative' }}
+    >
       <Canvas
-        camera={{ position: [0, 0.6, 4.5], fov: 42 }}
-        style={{ background: 'transparent' }}
-        dpr={[1, 1.5]}  /* cap pixel ratio to avoid rendering 4x pixels on retina */
-        frameloop={isVisible ? 'always' : 'never'}  /* stop rendering when off-screen */
+        camera={{ position: [0, 0.4, 5], fov: 42 }}
+        dpr={[1, 1.5]}
+        frameloop={isVisible ? 'always' : 'never'}
         gl={{
           antialias: true,
           alpha: true,
-          powerPreference: 'high-performance',
+          powerPreference: 'default',
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.2,
         }}
       >
-        {/* Lighting rig */}
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[5, 6, 4]} intensity={1.8} color="#ffffff" />
-        <directionalLight position={[-4, 3, -3]} intensity={0.7} color="#a5b4fc" />
-        <pointLight position={[0, -3, 3]} intensity={0.6} color="#22d3ee" />
-        <hemisphereLight skyColor="#c7d2fe" groundColor="#1e1b4b" intensity={0.5} />
+        <ambientLight intensity={0.8} />
+        <directionalLight
+          position={[5, 6, 4]}
+          intensity={1.5}
+          color="#ffffff"
+        />
+        <pointLight
+          position={[-4, 2, 3]}
+          intensity={2}
+          color="#8b5cf6"
+        />
+        <pointLight
+          position={[0, -3, 3]}
+          intensity={1.2}
+          color="#22d3ee"
+        />
 
-        {/* Subtle starfield – reduced count */}
-        <Stars radius={60} depth={50} count={800} factor={2.5} fade speed={0.3} />
+        <Stars
+          radius={40}
+          depth={30}
+          count={500}
+          factor={2}
+          fade
+          speed={0.2}
+        />
 
-        {/* Brain GLB model */}
-        <Center>
-          <BrainModel />
-        </Center>
+        <BrainPlaceholder />
         <NeuralParticles />
 
-        {/* Interactive orbit controls – drag to rotate, scroll to zoom */}
         <OrbitControls
           enablePan={false}
-          enableZoom={true}
+          enableZoom
           minDistance={2.5}
           maxDistance={8}
           autoRotate={false}

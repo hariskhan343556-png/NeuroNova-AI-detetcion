@@ -31,3 +31,22 @@ Thumbs.db
 # Binary ML artifacts — downloaded at Docker build time from Pulasty/brain-tumor-model
 *.pt
 *.glb
+
+# Python environments
+backend/venv/
+backend/.venv/
+
+# Environment variables
+backend/.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Database temporary files
+backend/*.db-shm
+backend/*.db-wal
+
+# Frontend dependencies and builds
+frontend/node_modules/
+frontend/dist/
